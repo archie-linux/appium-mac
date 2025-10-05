@@ -1,8 +1,7 @@
 import pytest
 from appium import webdriver
 from appium.webdriver.common.appiumby import AppiumBy
-
-CLOSE_BUTTON_XPATH = "/AXApplication[@AXTitle='Calculator']/AXWindow[@AXIdentifier='_NS:435' and @AXSubrole='AXStandardWindow']/AXButton[@AXSubrole='AXCloseButton']"
+import os
 
 @pytest.fixture(scope='module')
 def driver(request):
@@ -19,7 +18,7 @@ def driver(request):
     driver.get(request.param)
 
     def driver_teardown():
-        driver.find_element(by=AppiumBy.XPATH, value=CLOSE_BUTTON_XPATH).click()
+        os.system("pkill -x '" + request.param + "'")
         driver.quit()
 
     request.addfinalizer(driver_teardown)
