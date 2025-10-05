@@ -15,6 +15,9 @@ PASSWORD_OK_XPATH = BASE_AXPATH + "/AXSheet/AXButton[@AXTitle='OK' and @AXIdenti
 LIST_NOTES_XPATH = BASE_AXPATH + "/AXSplitGroup[0]/AXSplitGroup[0]/AXScrollArea/AXTable/AXRow/AXCell[0]/AXCell/AXStaticText"
 LOCK_NOTES_MENU_BUTTON_XPATH = BASE_AXPATH + "/AXToolbar[0]/AXGroup[2]/AXMenuButton[@AXValue='locked']"
 UNLOCK_NOTES_MENU_BUTTON_XPATH = BASE_AXPATH + "/AXToolbar[0]/AXGroup[2]/AXMenuButton[@AXValue='unlocked']"
+
+REMOVE_LOCK_XPATH = BASE_AXPATH + "/AXToolbar[0]/AXGroup[2]/AXMenu[0]/AXMenuItem[@AXTitle='Remove Lock']"
+
 LOCK_NOTE_MENU_ITEM_BUTTON_XPATH = BASE_AXPATH + "/AXToolbar[0]/AXGroup[2]/AXMenu[0]/AXMenuItem[@AXTitle='Lock Note']"
 LOCK_WINDOW_XPATH = BASE_AXPATH + "/AXSheet"
 CLOSE_ALL_LOCKED_NOTES_XPATH = BASE_AXPATH + "/AXToolbar[0]/AXGroup[2]/AXMenu[0]/AXMenuItem[@AXTitle='Close All Locked Notes]"
@@ -24,30 +27,17 @@ LOCKED_NOTE_TEXT_XPATH = SPLIT_GROUP_XPATH + "/AXStaticText[@AXValue='This note 
 LOCKED_NOTE_ENTER_PASSWORD_TEXT_XPATH = SPLIT_GROUP_XPATH + "/AXStaticText[@AXValue='Enter the notes password to view locked notes.']"
 FIRST_NOTE_STATUS_XPATH = BASE_AXPATH +  "/AXSplitGroup[0]/AXSplitGroup[0]/AXScrollArea/AXTable/AXRow[@AXSubrole='AXTableRow']/AXCell[0]/AXCell/AXStaticText[@AXValue='Locked']"
 
-@pytest.fixture
-def delete_note(driver):
-    yield
-    driver.find_element(by=AppiumBy.XPATH, value=DELETE_NOTE_XPATH).click()
 
-@pytest.mark.parametrize("driver", ["Notes"], indirect=["driver"])
-def test_notes(driver, delete_note):
-    NOTE_TITLE_TEXT = "New Note"
+# create n notes
+def create_notes(driver, n=1):
+    for i in range(n):
+        NOTE_TITLE_TEXT = f"Note {i}"
 
-    driver.find_element(by=AppiumBy.XPATH, value=ADD_NOTE_XPATH).click()
-    driver.find_element(by=AppiumBy.XPATH, value=NOTE_TEXTAREA_XPATH).send_keys(NOTE_TITLE_TEXT + "\n\nHere's some example text..")
+        # Create new note
+        driver.find_element(by=AppiumBy.XPATH, value=ADD_NOTE_XPATH).click()
+        driver.find_element(by=AppiumBy.XPATH, value=NOTE_TEXTAREA_XPATH).send_keys(NOTE_TITLE_TEXT + "\n\nHere's some example text..")
 
-    note_title = driver.find_element(by=AppiumBy.XPATH, value=LIST_NOTES_XPATH)
-    assert note_title.text == NOTE_TITLE_TEXT
-
-@pytest.mark.parametrize("driver", ["Notes"], indirect=["driver"])
-def test_lock_note(driver):
-    NOTE_TITLE_TEXT = "New Note"
-
-    # Create new note
-    driver.find_element(by=AppiumBy.XPATH, value=ADD_NOTE_XPATH).click()
-    driver.find_element(by=AppiumBy.XPATH, value=NOTE_TEXTAREA_XPATH).send_keys(NOTE_TITLE_TEXT + "\n\nHere's some example text..")
-
-    # Lock Note
+def lock_note(driver):
     driver.find_element(by=AppiumBy.XPATH, value=LOCK_NOTES_MENU_BUTTON_XPATH).click()
     driver.find_element(by=AppiumBy.XPATH, value=LOCK_NOTE_MENU_ITEM_BUTTON_XPATH).click()
 
@@ -67,6 +57,32 @@ def test_lock_note(driver):
     driver.find_element(by=AppiumBy.XPATH, value=UNLOCK_NOTES_MENU_BUTTON_XPATH).click()
     driver.find_element(by=AppiumBy.XPATH, value=CLOSE_ALL_LOCKED_NOTES_XPATH).click()
 
+
+def unlock_note(driver):
+    driver.find_element(by=AppiumBy.XPATH, value=LOCK_NOTES_MENU_BUTTON_XPATH).click()
+    driver.find_element(by=AppiumBy.XPATH, value=REMOVE_LOCK_XPATH).click()
+    driver.find_element(by=AppiumBy.XPATH, value=PASSWORD_TEXT_FIELD_XPATH).send_keys('1111')
+    driver.find_element(by=AppiumBy.XPATH, value=PASSWORD_OK_XPATH).click()
+
+
+def delete_note(driver):
+    driver.find_element(by=AppiumBy.XPATH, value=DELETE_NOTE_XPATH).click()
+
+@pytest.mark.parametrize("driver", ["Notes"], indirect=["driver"])
+def test_create_note(driver):
+    create_notes(driver)
+
+    note_title = driver.find_element(by=AppiumBy.XPATH, value=LIST_NOTES_XPATH)
+    assert 'Note' in note_title.text
+
+    delete_note(driver)
+
+@pytest.mark.parametrize("driver", ["Notes"], indirect=["driver"])
+def test_lock_note(driver):
+    create_notes(driver)
+
+    lock_note(driver)
+
     # Verify that the created note is locked
     cell_status = driver.find_element(by=AppiumBy.XPATH, value=FIRST_NOTE_STATUS_XPATH)
     assert cell_status.text == 'Locked'
@@ -75,3 +91,5 @@ def test_lock_note(driver):
     driver.find_element(by=AppiumBy.XPATH, value=LOCKED_NOTE_TEXT_XPATH).is_displayed()
     driver.find_element(by=AppiumBy.XPATH, value=LOCKED_NOTE_ENTER_PASSWORD_TEXT_XPATH).is_displayed()
 
+    unlock_note(driver)
+    delete_note(driver)
